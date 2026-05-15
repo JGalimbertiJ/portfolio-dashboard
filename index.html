@@ -1,0 +1,502 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Portfolio Dashboard</title>
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
+:root{
+  --bg:#0a0a0f;--surface:#111118;--surface2:#18181f;
+  --border:rgba(255,255,255,0.07);--border2:rgba(255,255,255,0.13);
+  --text:#f0f0f5;--muted:#6b6b80;
+  --accent:#7c6af7;--accent2:#a594f9;
+  --green:#3dd68c;--red:#f55f57;--amber:#f0a429;
+  --mono:'IBM Plex Mono',monospace;--sans:'Syne',sans-serif;
+}
+body{background:var(--bg);color:var(--text);font-family:var(--sans);min-height:100vh;overflow-x:hidden;}
+body::before{content:'';position:fixed;inset:0;background-image:linear-gradient(rgba(124,106,247,0.03) 1px,transparent 1px),linear-gradient(90deg,rgba(124,106,247,0.03) 1px,transparent 1px);background-size:40px 40px;pointer-events:none;z-index:0;}
+.app{position:relative;z-index:1;max-width:1100px;margin:0 auto;padding:2rem 1.5rem 4rem;}
+
+header{display:flex;align-items:flex-end;justify-content:space-between;margin-bottom:2.5rem;padding-bottom:1.5rem;border-bottom:1px solid var(--border);}
+.logo{font-size:11px;font-weight:600;letter-spacing:.15em;text-transform:uppercase;color:var(--muted);font-family:var(--mono);}
+.logo span{color:var(--accent2);}
+.last-update{font-size:11px;color:var(--muted);font-family:var(--mono);}
+
+#upload-zone{border:1.5px dashed var(--border2);border-radius:16px;padding:3rem 2rem;text-align:center;cursor:pointer;transition:border-color .2s,background .2s;background:var(--surface);margin-bottom:2rem;position:relative;overflow:hidden;}
+#upload-zone::after{content:'';position:absolute;inset:0;background:radial-gradient(ellipse at 50% 0%,rgba(124,106,247,0.08) 0%,transparent 70%);pointer-events:none;}
+#upload-zone:hover,#upload-zone.drag{border-color:var(--accent);background:rgba(124,106,247,0.05);}
+#upload-zone.loading{border-color:var(--accent);cursor:default;}
+.upload-icon{font-size:36px;margin-bottom:1rem;opacity:.5;}
+.upload-title{font-size:15px;font-weight:600;margin-bottom:.4rem;}
+.upload-sub{font-size:12px;color:var(--muted);line-height:1.6;}
+#file-input{display:none;}
+
+.progress-steps{display:flex;gap:0;justify-content:center;margin-top:1.2rem;flex-wrap:wrap;gap:4px;}
+.step{display:flex;align-items:center;gap:5px;font-size:10px;font-family:var(--mono);color:var(--muted);padding:0 8px;}
+.step-dot{width:7px;height:7px;border-radius:50%;background:var(--border2);flex-shrink:0;transition:background .3s;}
+.step.active .step-dot{background:var(--accent);box-shadow:0 0 8px rgba(124,106,247,.5);}
+.step.done .step-dot{background:var(--green);}
+.step.active{color:var(--accent2);}
+.step.done{color:var(--green);}
+.step-sep{color:rgba(255,255,255,.15);font-size:10px;}
+.spinner{width:28px;height:28px;border:2px solid var(--border2);border-top-color:var(--accent);border-radius:50%;animation:spin .7s linear infinite;margin:0 auto .75rem;}
+@keyframes spin{to{transform:rotate(360deg);}}
+.loading-text{font-size:12px;color:var(--accent2);font-family:var(--mono);}
+
+.metrics-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:2rem;}
+.metric-card{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:1.1rem 1.2rem;position:relative;overflow:hidden;transition:border-color .2s;}
+.metric-card:hover{border-color:var(--border2);}
+.metric-card::before{content:'';position:absolute;top:0;left:0;right:0;height:2px;background:var(--accent);opacity:.4;}
+.metric-card.green::before{background:var(--green);}
+.metric-card.red::before{background:var(--red);}
+.metric-card.amber::before{background:var(--amber);}
+.metric-label{font-size:10px;letter-spacing:.1em;text-transform:uppercase;color:var(--muted);margin-bottom:.5rem;font-family:var(--mono);}
+.metric-value{font-size:22px;font-weight:700;line-height:1;}
+.metric-sub{font-size:11px;color:var(--muted);margin-top:.4rem;font-family:var(--mono);}
+
+.section-header{display:flex;align-items:center;gap:.75rem;margin-bottom:1rem;}
+.section-title-text{font-size:11px;letter-spacing:.12em;text-transform:uppercase;color:var(--muted);font-family:var(--mono);}
+.section-line{flex:1;height:1px;background:var(--border);}
+
+.table-wrap{background:var(--surface);border:1px solid var(--border);border-radius:14px;overflow:hidden;margin-bottom:2rem;}
+table{width:100%;border-collapse:collapse;}
+thead th{padding:10px 14px;font-size:10px;letter-spacing:.1em;text-transform:uppercase;color:var(--muted);text-align:left;background:var(--surface2);font-family:var(--mono);font-weight:500;border-bottom:1px solid var(--border);}
+tbody tr{border-bottom:1px solid var(--border);transition:background .15s;}
+tbody tr:last-child{border-bottom:none;}
+tbody tr:hover{background:rgba(255,255,255,.02);}
+td{padding:11px 14px;font-size:13px;vertical-align:middle;}
+.ticker{font-weight:700;font-size:14px;letter-spacing:.03em;font-family:var(--mono);color:var(--accent2);}
+.cat-pill{display:inline-block;font-size:9px;padding:2px 7px;border-radius:4px;font-weight:600;letter-spacing:.05em;text-transform:uppercase;font-family:var(--mono);}
+.action-pill{display:inline-flex;align-items:center;font-size:10px;padding:3px 9px;border-radius:5px;font-weight:600;letter-spacing:.05em;text-transform:uppercase;font-family:var(--mono);}
+.act-add{background:rgba(61,214,140,.12);color:var(--green);}
+.act-hold{background:rgba(124,106,247,.12);color:var(--accent2);}
+.act-reduce{background:rgba(240,164,41,.12);color:var(--amber);}
+.act-close{background:rgba(245,95,87,.12);color:var(--red);}
+.val-pos{color:var(--green);font-family:var(--mono);font-size:12px;}
+.val-neg{color:var(--red);font-family:var(--mono);font-size:12px;}
+.val-neu{color:var(--muted);font-family:var(--mono);font-size:12px;}
+.pct-bar-bg{background:rgba(255,255,255,.06);border-radius:2px;height:4px;width:80px;display:inline-block;vertical-align:middle;}
+.pct-bar-fill{height:4px;border-radius:2px;display:block;}
+.reason-text{font-size:11px;color:var(--muted);line-height:1.5;max-width:200px;}
+
+.bottom-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:2rem;}
+.card{background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:1.2rem 1.4rem;}
+.card-title{font-size:10px;letter-spacing:.1em;text-transform:uppercase;color:var(--muted);margin-bottom:1rem;font-family:var(--mono);}
+
+.alert-item{display:flex;gap:10px;align-items:flex-start;margin-bottom:.85rem;}
+.alert-dot{width:6px;height:6px;border-radius:50%;flex-shrink:0;margin-top:5px;}
+.alert-dot.warn{background:var(--amber);}
+.alert-dot.ok{background:var(--green);}
+.alert-dot.info{background:var(--accent2);}
+.alert-dot.danger{background:var(--red);}
+.alert-text{font-size:12px;color:#b0b0c0;line-height:1.55;}
+
+.cat-row{display:flex;align-items:center;gap:10px;margin-bottom:.7rem;}
+.cat-name{font-size:12px;color:var(--text);width:130px;flex-shrink:0;}
+.cat-bar-bg{flex:1;background:rgba(255,255,255,.06);border-radius:2px;height:5px;}
+.cat-bar-fill{height:5px;border-radius:2px;}
+.cat-pct{font-size:11px;color:var(--muted);width:38px;text-align:right;font-family:var(--mono);}
+
+.upload-btn{display:inline-flex;align-items:center;gap:8px;padding:8px 18px;border:1px solid var(--border2);border-radius:8px;font-size:12px;font-family:var(--mono);color:var(--accent2);cursor:pointer;background:transparent;transition:background .2s,border-color .2s;font-weight:500;letter-spacing:.05em;}
+.upload-btn:hover{background:rgba(124,106,247,.08);border-color:var(--accent);}
+
+.error-msg{color:var(--red);font-size:12px;font-family:var(--mono);margin-top:.5rem;}
+
+.analysis-box{background:var(--surface2);border:1px solid var(--border);border-left:3px solid var(--accent);border-radius:12px;padding:1.2rem 1.4rem;margin-bottom:2rem;}
+.analysis-label{font-size:10px;letter-spacing:.1em;text-transform:uppercase;color:var(--accent2);font-family:var(--mono);margin-bottom:.6rem;}
+.analysis-text{font-size:13px;color:#c0c0d0;line-height:1.7;}
+
+#empty-state{text-align:center;padding:3rem 0;}
+.empty-title{font-size:14px;color:var(--muted);margin-bottom:.5rem;}
+.empty-sub{font-size:12px;color:rgba(107,107,128,.6);font-family:var(--mono);}
+</style>
+</head>
+<body>
+<div class="app">
+  <header>
+    <div>
+      <div class="logo">Portfolio <span>// CEDEARs</span></div>
+      <div style="font-size:22px;font-weight:700;margin-top:4px;">Dashboard</div>
+    </div>
+    <div class="last-update" id="last-update">Sin datos — subí una captura para comenzar</div>
+  </header>
+
+  <div id="upload-zone" onclick="handleZoneClick()">
+    <div id="upload-content">
+      <div class="upload-icon">⬆</div>
+      <div class="upload-title">Subí una captura de tu cartera en Balanz</div>
+      <div class="upload-sub">Pegá con <kbd style="background:rgba(255,255,255,.08);padding:1px 5px;border-radius:3px;font-family:var(--mono);font-size:11px;">Ctrl+V</kbd>, arrastrá la imagen, o hacé clic para seleccionarla.<br>Claude lee la captura, analiza la composición y genera recomendaciones frescas.</div>
+      <div id="paste-hint" style="margin-top:.8rem;font-size:11px;font-family:var(--mono);color:var(--accent2);opacity:0;transition:opacity .3s;">// listo para recibir Ctrl+V</div>
+    </div>
+    <div id="loading-content" style="display:none;">
+      <div class="spinner"></div>
+      <div class="loading-text" id="loading-text">Iniciando…</div>
+      <div class="progress-steps">
+        <div class="step" id="step-1"><div class="step-dot"></div>Leyendo imagen</div>
+        <div class="step-sep">—</div>
+        <div class="step" id="step-2"><div class="step-dot"></div>Extrayendo datos</div>
+        <div class="step-sep">—</div>
+        <div class="step" id="step-3"><div class="step-dot"></div>Analizando cartera</div>
+        <div class="step-sep">—</div>
+        <div class="step" id="step-4"><div class="step-dot"></div>Generando recomendaciones</div>
+      </div>
+    </div>
+    <div id="error-content" style="display:none;">
+      <div class="upload-icon">⚠</div>
+      <div class="upload-title">No pude procesar la imagen</div>
+      <div id="error-detail" class="error-msg"></div>
+      <button class="upload-btn" style="margin-top:1rem;" onclick="resetUpload(event)">Intentar de nuevo</button>
+    </div>
+    <input type="file" id="file-input" accept="image/*" onchange="handleFile(event)">
+  </div>
+
+  <div id="dashboard" style="display:none;">
+    <div class="analysis-box" id="analysis-box" style="display:none;">
+      <div class="analysis-label">Análisis de Claude</div>
+      <div class="analysis-text" id="analysis-text"></div>
+    </div>
+
+    <div class="metrics-grid" id="metrics-grid"></div>
+
+    <div class="section-header">
+      <span class="section-title-text">Posiciones y recomendaciones</span>
+      <div class="section-line"></div>
+      <button class="upload-btn" onclick="document.getElementById('file-input').click()">↑ Actualizar captura</button>
+    </div>
+
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th>Ticker</th><th>Categoría</th><th>% Cartera</th>
+            <th>V. Actual</th><th>Rendimiento</th><th>P&L</th>
+            <th>Acción</th><th>Razonamiento</th>
+          </tr>
+        </thead>
+        <tbody id="positions-tbody"></tbody>
+      </table>
+    </div>
+
+    <div class="bottom-grid">
+      <div class="card">
+        <div class="card-title">Concentración por categoría</div>
+        <div id="cat-bars"></div>
+      </div>
+      <div class="card">
+        <div class="card-title">Alertas de cartera</div>
+        <div id="alerts-list"></div>
+      </div>
+    </div>
+  </div>
+
+  <div id="empty-state">
+    <div class="empty-title">Tu dashboard aparecerá aquí</div>
+    <div class="empty-sub">// esperando primera captura</div>
+  </div>
+</div>
+
+<script>
+const CAT_COLORS={
+  'ETF':'#378ADD','Tech US':'#7F77DD','Semiconductores':'#1D9E75',
+  'Tech LATAM':'#D85A30','Energía AR':'#EF9F27','Financiero':'#D4537E',
+  'Cobertura':'#888780','Cloud/Retail':'#3dd68c','Holding':'#a594f9','Otro':'#6b6b80'
+};
+
+function handleZoneClick(){
+  if(document.getElementById('loading-content').style.display!=='none') return;
+  document.getElementById('file-input').click();
+}
+function setStep(n){
+  for(let i=1;i<=4;i++){
+    const el=document.getElementById('step-'+i);
+    el.classList.remove('active','done');
+    if(i<n) el.classList.add('done');
+    else if(i===n) el.classList.add('active');
+  }
+}
+function resetUpload(e){
+  if(e) e.stopPropagation();
+  document.getElementById('upload-content').style.display='';
+  document.getElementById('loading-content').style.display='none';
+  document.getElementById('error-content').style.display='none';
+  document.getElementById('upload-zone').classList.remove('loading');
+}
+function setLoading(msg,step){
+  document.getElementById('upload-content').style.display='none';
+  document.getElementById('error-content').style.display='none';
+  document.getElementById('loading-content').style.display='';
+  document.getElementById('loading-text').textContent=msg;
+  document.getElementById('upload-zone').classList.add('loading');
+  if(step) setStep(step);
+}
+function setError(msg){
+  document.getElementById('upload-content').style.display='none';
+  document.getElementById('loading-content').style.display='none';
+  document.getElementById('error-content').style.display='';
+  document.getElementById('error-detail').textContent=msg;
+  document.getElementById('upload-zone').classList.remove('loading');
+}
+
+async function callClaude(system, messages, maxTokens){
+  const res=await fetch('https://api.anthropic.com/v1/messages',{
+    method:'POST',
+    headers:{'Content-Type':'application/json'},
+    body:JSON.stringify({model:'claude-sonnet-4-20250514',max_tokens:maxTokens||1000,system,messages})
+  });
+  const data=await res.json();
+  if(data.error) throw new Error(data.error.message);
+  return data.content.map(b=>b.text||'').join('').trim();
+}
+
+async function handleFile(event){
+  const file=event.target.files[0];
+  if(!file) return;
+  event.target.value='';
+  setLoading('Leyendo imagen…',1);
+
+  let base64;
+  try{
+    base64=await new Promise((res,rej)=>{
+      const r=new FileReader();
+      r.onload=()=>res(r.result.split(',')[1]);
+      r.onerror=()=>rej(new Error('No se pudo leer el archivo'));
+      r.readAsDataURL(file);
+    });
+  }catch(e){ setError('No se pudo leer el archivo de imagen.'); return; }
+
+  const mediaType=file.type||'image/png';
+
+  // ── CALL 1: extract data from image ──
+  setLoading('Extrayendo datos de la cartera…',2);
+  let portfolio;
+  try{
+    const raw=await callClaude(
+      `Sos un extractor de datos de carteras. Recibís capturas de pantalla de Balanz y devolvés ÚNICAMENTE JSON válido, sin texto adicional ni backticks.`,
+      [{role:'user',content:[
+        {type:'image',source:{type:'base64',media_type:mediaType,data:base64}},
+        {type:'text',text:`Extraé los datos de esta cartera. Devolvé SOLO este JSON:
+{
+  "holdings": [
+    {"ticker":"NVDA","nominales":186,"precio":9.79,"pct_cartera":16.62,"v_actual":1821,"v_inicial":1611,"rendimiento_pct":13.00,"pl":210}
+  ],
+  "total_actual": 10907,
+  "total_inicial": 10012,
+  "total_pl": 895
+}
+Valores en USD. Campos desconocidos: null. SOLO el JSON.`}
+      ]}],
+      1500
+    );
+    const clean1=raw.replace(/```json|```/g,'').trim();
+    const match1=clean1.match(/\{[\s\S]*\}/);
+    if(!match1) throw new Error('Respuesta inesperada de la API');
+    portfolio=JSON.parse(match1[0]);
+    if(!portfolio.holdings||!Array.isArray(portfolio.holdings)||portfolio.holdings.length===0)
+      throw new Error('No se encontraron posiciones en la imagen');
+  }catch(e){
+    setError('Error al leer la imagen: '+e.message+'. Asegurate que la captura muestre la tabla completa de Balanz.'); return;
+  }
+
+  // ── CALL 2: full analysis + recommendations ──
+  setLoading('Analizando composición y riesgo…',3);
+  await new Promise(r=>setTimeout(r,200));
+  setLoading('Generando recomendaciones…',4);
+
+  let analysis;
+  try{
+    const holdingsStr=portfolio.holdings.map(h=>
+      `${h.ticker}: ${(h.pct_cartera||0).toFixed(2)}% cartera | rend ${(h.rendimiento_pct||0).toFixed(2)}% | P&L u$s ${h.pl} | V.actual u$s ${h.v_actual}`
+    ).join('\n');
+
+    const raw2=await callClaude(
+      `Sos un asesor de inversiones especializado en CEDEARs para inversores argentinos con perfil agresivo y horizonte largo. Aplicás criterios Markowitz adaptados a estrategia buy-only. Devolvés siempre JSON puro, sin texto adicional ni backticks.`,
+      [{role:'user',content:`Analizá esta cartera y generá recomendaciones frescas basadas en los datos actuales.
+
+CARTERA:
+${holdingsStr}
+Total: u$s ${portfolio.total_actual} | Costo: u$s ${portfolio.total_inicial} | P&L total: u$s ${portfolio.total_pl}
+
+PERFIL DEL INVERSOR:
+- Agresivo, horizonte 34 años (retiro)
+- Tolera caídas del 35% y compraría más
+- Aportes: ~u$s 770/mes regulares
+- Estrategia buy-only (evita ventas innecesarias)
+- Convicción en MELI a largo plazo a pesar de pérdida actual
+- Objetivo: máximo retorno por unidad de riesgo
+- Moneda referencia: USD
+
+CONTEXTO CLAVE A CONSIDERAR:
+- QQQ contiene NVDA (~7%), MSFT (~7%), META (~4%), GOOGL (~4%), AMD (~1%) → posible solapamiento
+- AMZN está ausente (Cloud + Retail, complementaría bien)
+- VIST es exposición Argentina oil&gas con alta volatilidad local
+- Con 34 años de horizonte, la volatilidad cortoplacista no es relevante
+
+Devolvé ÚNICAMENTE este JSON:
+{
+  "summary": "2-3 oraciones: estado general, principales fortalezas y el punto más urgente a resolver",
+  "positions": [
+    {
+      "ticker": "NVDA",
+      "categoria": "Semiconductores",
+      "accion": "acumular",
+      "target_pct": 18,
+      "razon": "razón concisa de 8-12 palabras máximo"
+    }
+  ],
+  "alertas": [
+    {
+      "tipo": "warn",
+      "texto": "descripción clara y accionable de la alerta"
+    }
+  ]
+}
+
+Valores permitidos en "accion": acumular, mantener, diluir, cerrar
+Valores permitidos en "tipo": warn, danger, ok, info
+Valores permitidos en "categoria": ETF, Tech US, Semiconductores, Tech LATAM, Energía AR, Financiero, Cobertura, Cloud/Retail, Holding, Otro
+Incluí TODAS las posiciones del holdings en "positions". Generá entre 4-6 alertas relevantes.`}],
+      2500
+    );
+    const clean2=raw2.replace(/```json|```/g,'').trim();
+    const match2=clean2.match(/\{[\s\S]*\}/);
+    if(!match2) throw new Error('Respuesta inesperada');
+    analysis=JSON.parse(match2[0]);
+  }catch(e){
+    setError('Error generando el análisis: '+e.message+'. Intentá de nuevo.'); return;
+  }
+
+  renderDashboard(portfolio,analysis);
+}
+
+// focus hint
+window.addEventListener('focus',()=>{ const h=document.getElementById('paste-hint'); if(h) h.style.opacity='1'; });
+window.addEventListener('blur', ()=>{ const h=document.getElementById('paste-hint'); if(h) h.style.opacity='0'; });
+
+// paste (Ctrl+V)
+document.addEventListener('paste',e=>{
+  const items=e.clipboardData?.items;
+  if(!items) return;
+  for(const item of items){
+    if(item.type.startsWith('image/')){
+      e.preventDefault();
+      const blob=item.getAsFile();
+      if(!blob){ setError('No se pudo leer la imagen del portapapeles. Intentá guardarla y subirla manualmente.'); return; }
+      // Force a proper File object with explicit type
+      const file=new File([blob], 'captura.png', {type: blob.type||'image/png'});
+      handleFile({target:{files:[file],value:''}});
+      return;
+    }
+  }
+});
+
+// drag & drop
+const zone=document.getElementById('upload-zone');
+zone.addEventListener('dragover',e=>{e.preventDefault();zone.classList.add('drag');});
+zone.addEventListener('dragleave',()=>zone.classList.remove('drag'));
+zone.addEventListener('drop',e=>{
+  e.preventDefault();zone.classList.remove('drag');
+  const file=e.dataTransfer.files[0];
+  if(file&&file.type.startsWith('image/')) handleFile({target:{files:[file],value:''}});
+});
+
+function fmt(n){
+  if(n==null) return '—';
+  const abs=Math.abs(n);
+  if(abs>=1e6) return (n/1e6).toFixed(2)+'M';
+  if(abs>=1000) return (n/1000).toFixed(1)+'k';
+  return Math.round(n).toString();
+}
+
+function renderDashboard(portfolio,analysis){
+  document.getElementById('empty-state').style.display='none';
+  document.getElementById('dashboard').style.display='';
+  document.getElementById('upload-zone').classList.remove('loading');
+  document.getElementById('upload-content').style.display='';
+  document.getElementById('loading-content').style.display='none';
+  document.getElementById('error-content').style.display='none';
+
+  const now=new Date();
+  document.getElementById('last-update').textContent=
+    `Actualizado: ${now.toLocaleDateString('es-AR')} ${now.toLocaleTimeString('es-AR',{hour:'2-digit',minute:'2-digit'})}`;
+
+  if(analysis.summary){
+    document.getElementById('analysis-box').style.display='';
+    document.getElementById('analysis-text').textContent=analysis.summary;
+  }
+
+  const pl=portfolio.total_pl||0;
+  const costo=portfolio.total_inicial||0;
+  const plPct=costo>0?((pl/costo)*100).toFixed(2):'0.00';
+  const winners=portfolio.holdings.filter(h=>(h.pl||0)>0).length;
+
+  document.getElementById('metrics-grid').innerHTML=[
+    {label:'Valor actual',          value:'u$s '+fmt(portfolio.total_actual), sub:portfolio.holdings.length+' posiciones', cls:''},
+    {label:'Costo total',           value:'u$s '+fmt(costo),                  sub:'base de compra', cls:''},
+    {label:'Ganancia no realizada', value:(pl>=0?'+':'')+'u$s '+fmt(pl),      sub:(pl>=0?'+':'')+plPct+'% total', cls:pl>=0?'green':'red'},
+    {label:'Ganadoras / Total',     value:winners+' / '+portfolio.holdings.length, sub:(portfolio.holdings.length-winners)+' en negativo', cls:'amber'},
+  ].map(m=>`<div class="metric-card ${m.cls}">
+    <div class="metric-label">${m.label}</div>
+    <div class="metric-value">${m.value}</div>
+    <div class="metric-sub">${m.sub}</div>
+  </div>`).join('');
+
+  const recMap={};
+  (analysis.positions||[]).forEach(p=>{recMap[p.ticker]=p;});
+
+  const sorted=[...portfolio.holdings].sort((a,b)=>(b.pct_cartera||0)-(a.pct_cartera||0));
+  const maxPct=Math.max(...sorted.map(h=>h.pct_cartera||0),1);
+
+  const ACT_LABELS={acumular:'Acumular',mantener:'Mantener',diluir:'Diluir',cerrar:'Cerrar'};
+  const ACT_CLASS={acumular:'act-add',mantener:'act-hold',diluir:'act-reduce',cerrar:'act-close'};
+
+  document.getElementById('positions-tbody').innerHTML=sorted.map(h=>{
+    const rec=recMap[h.ticker]||{};
+    const cat=rec.categoria||'Otro';
+    const color=CAT_COLORS[cat]||'#6b6b80';
+    const actKey=rec.accion||'mantener';
+    const retStr=h.rendimiento_pct!=null?(h.rendimiento_pct>=0?'+':'')+h.rendimiento_pct.toFixed(2)+'%':'—';
+    const plStr=h.pl!=null?(h.pl>=0?'+':'-')+' u$s '+fmt(Math.abs(h.pl)):'—';
+    const retCls=h.rendimiento_pct==null?'val-neu':h.rendimiento_pct>=0?'val-pos':'val-neg';
+    const plCls=h.pl==null?'val-neu':h.pl>=0?'val-pos':'val-neg';
+    const barW=((h.pct_cartera||0)/maxPct*100).toFixed(1);
+    const targetBadge=rec.target_pct?`<span style="font-size:9px;color:var(--muted);font-family:var(--mono);margin-left:5px;">→${rec.target_pct}%</span>`:'';
+    return `<tr>
+      <td class="ticker">${h.ticker}</td>
+      <td><span class="cat-pill" style="background:${color}22;color:${color}">${cat}</span></td>
+      <td><div style="display:flex;align-items:center;gap:8px;">
+        <div class="pct-bar-bg"><div class="pct-bar-fill" style="width:${barW}%;background:${color};"></div></div>
+        <span style="font-size:12px;font-family:var(--mono);color:var(--muted)">${(h.pct_cartera||0).toFixed(1)}%</span>
+      </div></td>
+      <td style="font-family:var(--mono);font-size:12px;">u$s ${fmt(h.v_actual||0)}</td>
+      <td class="${retCls}">${retStr}</td>
+      <td class="${plCls}">${plStr}</td>
+      <td><span class="action-pill ${ACT_CLASS[actKey]||'act-hold'}">${ACT_LABELS[actKey]||actKey}</span>${targetBadge}</td>
+      <td class="reason-text">${rec.razon||'—'}</td>
+    </tr>`;
+  }).join('');
+
+  const cats={};
+  sorted.forEach(h=>{
+    const cat=(recMap[h.ticker]||{}).categoria||'Otro';
+    cats[cat]=(cats[cat]||0)+(h.pct_cartera||0);
+  });
+  const catSorted=Object.entries(cats).sort((a,b)=>b[1]-a[1]);
+  const maxCat=catSorted[0]?.[1]||1;
+  document.getElementById('cat-bars').innerHTML=catSorted.map(([cat,pct])=>
+    `<div class="cat-row">
+      <div class="cat-name">${cat}</div>
+      <div class="cat-bar-bg"><div class="cat-bar-fill" style="width:${(pct/maxCat*100).toFixed(1)}%;background:${CAT_COLORS[cat]||'#888'};"></div></div>
+      <div class="cat-pct">${pct.toFixed(1)}%</div>
+    </div>`
+  ).join('');
+
+  const alerts=analysis.alertas||[];
+  document.getElementById('alerts-list').innerHTML=alerts.length
+    ?alerts.map(a=>`<div class="alert-item"><div class="alert-dot ${a.tipo||'info'}"></div><div class="alert-text">${a.texto}</div></div>`).join('')
+    :'<div class="alert-item"><div class="alert-dot ok"></div><div class="alert-text">Sin alertas críticas en este momento.</div></div>';
+}
+</script>
+</body>
+</html>
