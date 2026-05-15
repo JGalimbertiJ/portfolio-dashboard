@@ -115,12 +115,35 @@ td{padding:11px 14px;font-size:13px;vertical-align:middle;}
 </head>
 <body>
 <div class="app">
+  <!-- API KEY MODAL -->
+  <div id="apikey-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.7);z-index:1000;align-items:center;justify-content:center;backdrop-filter:blur(4px);">
+    <div style="background:var(--surface);border:1px solid var(--border2);border-radius:16px;padding:2rem;width:100%;max-width:440px;margin:1rem;">
+      <div style="font-size:11px;letter-spacing:.12em;text-transform:uppercase;color:var(--accent2);font-family:var(--mono);margin-bottom:.5rem;">Configuración</div>
+      <div style="font-size:18px;font-weight:700;margin-bottom:.75rem;">API Key de Anthropic</div>
+      <p style="font-size:12px;color:var(--muted);line-height:1.6;margin-bottom:1.25rem;">
+        La key se guarda solo en tu browser (localStorage) y nunca sale de tu computadora.<br><br>
+        Obtené tu key en <a href="https://console.anthropic.com/settings/keys" target="_blank" style="color:var(--accent2);">console.anthropic.com</a> → API Keys → Create Key.
+      </p>
+      <input id="apikey-input" type="password" placeholder="sk-ant-api03-…"
+        style="width:100%;background:var(--surface2);border:1px solid var(--border2);border-radius:8px;padding:10px 14px;font-family:var(--mono);font-size:13px;color:var(--text);outline:none;margin-bottom:.5rem;"
+        onkeydown="if(event.key==='Enter') submitApiKey()">
+      <div id="apikey-error" style="font-size:11px;color:var(--red);font-family:var(--mono);min-height:16px;margin-bottom:.75rem;"></div>
+      <div style="display:flex;gap:8px;">
+        <button onclick="submitApiKey()" style="flex:1;background:var(--accent);color:#fff;border:none;border-radius:8px;padding:10px;font-family:var(--mono);font-size:13px;font-weight:600;cursor:pointer;letter-spacing:.05em;">Guardar</button>
+        <button onclick="hideApiKeyModal()" style="background:transparent;color:var(--muted);border:1px solid var(--border2);border-radius:8px;padding:10px 16px;font-family:var(--mono);font-size:13px;cursor:pointer;">Cancelar</button>
+      </div>
+    </div>
+  </div>
+
   <header>
     <div>
       <div class="logo">Portfolio <span>// CEDEARs</span></div>
       <div style="font-size:22px;font-weight:700;margin-top:4px;">Dashboard</div>
     </div>
-    <div class="last-update" id="last-update">Sin datos — subí una captura para comenzar</div>
+    <div style="display:flex;flex-direction:column;align-items:flex-end;gap:6px;">
+      <div class="last-update" id="last-update">Sin datos — subí una captura para comenzar</div>
+      <button onclick="showApiKeyModal()" style="background:transparent;border:1px solid var(--border2);border-radius:6px;padding:4px 10px;font-family:var(--mono);font-size:11px;cursor:pointer;transition:border-color .2s;" id="key-status">Configurar API key</button>
+    </div>
   </header>
 
   <div id="upload-zone" onclick="handleZoneClick()">
@@ -239,14 +262,59 @@ function setError(msg){
   document.getElementById('upload-zone').classList.remove('loading');
 }
 
+
+
+// ── API KEY MANAGEMENT ──
+const API_KEY_STORAGE = 'portfolio_dashboard_apikey';
+
+function getApiKey(){ return localStorage.getItem(API_KEY_STORAGE)||''; }
+function saveApiKey(k){ localStorage.setItem(API_KEY_STORAGE, k.trim()); }
+function clearApiKey(){ localStorage.removeItem(API_KEY_STORAGE); }
+
+function showApiKeyModal(){
+  document.getElementById('apikey-modal').style.display='flex';
+  document.getElementById('apikey-input').value=getApiKey();
+  document.getElementById('apikey-input').focus();
+}
+function hideApiKeyModal(){ document.getElementById('apikey-modal').style.display='none'; }
+
+function submitApiKey(){
+  const val=document.getElementById('apikey-input').value.trim();
+  if(!val.startsWith('sk-ant-')){ 
+    document.getElementById('apikey-error').textContent='La key debe empezar con sk-ant-…';
+    return;
+  }
+  saveApiKey(val);
+  document.getElementById('apikey-error').textContent='';
+  hideApiKeyModal();
+  updateKeyStatus();
+}
+
+function updateKeyStatus(){
+  const k=getApiKey();
+  const el=document.getElementById('key-status');
+  if(k){ el.textContent='API key ✓'; el.style.color='var(--green)'; }
+  else { el.textContent='Configurar API key'; el.style.color='var(--amber)'; }
+}
+
 async function callClaude(system, messages, maxTokens){
+  const key=getApiKey();
+  if(!key){ showApiKeyModal(); throw new Error('API key no configurada'); }
   const res=await fetch('https://api.anthropic.com/v1/messages',{
     method:'POST',
-    headers:{'Content-Type':'application/json'},
+    headers:{
+      'Content-Type':'application/json',
+      'x-api-key': key,
+      'anthropic-version':'2023-06-01',
+      'anthropic-dangerous-direct-browser-access':'true'
+    },
     body:JSON.stringify({model:'claude-sonnet-4-20250514',max_tokens:maxTokens||1000,system,messages})
   });
   const data=await res.json();
-  if(data.error) throw new Error(data.error.message);
+  if(data.error){
+    if(data.error.type==='authentication_error'){ clearApiKey(); updateKeyStatus(); }
+    throw new Error(data.error.message);
+  }
   return data.content.map(b=>b.text||'').join('').trim();
 }
 
@@ -373,6 +441,10 @@ Incluí TODAS las posiciones del holdings en "positions". Generá entre 4-6 aler
 // focus hint
 window.addEventListener('focus',()=>{ const h=document.getElementById('paste-hint'); if(h) h.style.opacity='1'; });
 window.addEventListener('blur', ()=>{ const h=document.getElementById('paste-hint'); if(h) h.style.opacity='0'; });
+
+// init
+updateKeyStatus();
+if(!getApiKey()) showApiKeyModal();
 
 // paste (Ctrl+V)
 document.addEventListener('paste',e=>{
