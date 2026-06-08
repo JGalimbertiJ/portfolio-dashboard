@@ -615,11 +615,11 @@ Valores en USD donde estén disponibles. precio_cedear_ars es el precio del CEDE
   let analysis;
   try{
     const holdingsStr=portfolio.holdings.map(h=>
-      `${h.ticker}: ${(h.pct_cartera||0).toFixed(2)}% | rend ${(h.rendimiento_pct||0).toFixed(2)}% | P&L u$s ${h.pl} | Valor actual u$s ${h.v_actual}`
+      `${h.ticker}: ${(h.pct_cartera||0).toFixed(2)}% | rend ${(h.rendimiento_pct||0).toFixed(2)}% | P&L u$s ${h.pl} | Valor u$s ${h.v_actual}`
     ).join('\n');
 
     const cedearCtx=portfolio.holdings.map(h=>{
-      const t=(h?.ticker||'').toUpperCase();
+      const t=(h.ticker||'').toUpperCase();
       const cd=CEDEAR_DATA[t];if(!cd)return'';
       const gap=cd.ideal-(h.pct_cartera||0);
       return `${t}: β=${cd.beta} | ratio ${cd.ratio}:1 | ideal ${cd.ideal}% | actual ${(h.pct_cartera||0).toFixed(1)}% | gap ${gap>0?'+':''}${gap.toFixed(1)}%`;
@@ -627,13 +627,14 @@ Valores en USD donde estén disponibles. precio_cedear_ars es el precio del CEDE
 
     const raw2=await callClaude(
       'Sos un asesor de inversiones especializado en CEDEARs para inversores argentinos con perfil agresivo y horizonte de 30 años. Aplicás criterios Markowitz adaptados a buy-only. Devolvés JSON puro sin backticks ni texto adicional.',
-      [{role:"user",content:`Analizá esta cartera con profundidad institucional.
+      [{role:'user',content:`Analizá esta cartera con profundidad institucional.
 
 CARTERA ACTUAL:
 ${holdingsStr}
 
-TOTALES: u$s ${portfolio.total_actual} actual | u$s ${portfolio.total_inicial} costo | u$s ${portfolio.total_pl} PI`
-	MÉTRICAS CALCULADAS (client-side con betas FMP reales):
+TOTALES: u$s ${portfolio.total_actual} actual | u$s ${portfolio.total_inicial} costo | u$s ${portfolio.total_pl} P&L
+
+MÉTRICAS CALCULADAS (client-side con betas FMP reales):
 · Portfolio Beta: ${metrics.beta} (mercado = 1.0)
 · Win Rate: ${metrics.winRate}% (${metrics.winners}/${metrics.total} posiciones en verde)
 · Profit Factor: ${metrics.profitFactor}x (ganancias/pérdidas)
@@ -1155,7 +1156,7 @@ async function fetchCatalysts(tickers){
   const el=document.getElementById('catalyst-content');if(!el)return;
   try{
     const result=await callClaudeWithSearch(
-      'Sos un analista financiero experto en calendarios de earnings y eventos corporativos. Devolvé JSON puro.',
+      'Sos un analista financiero experto en calendarios de earnings y eventos corporativos. Devolvés JSON puro.',
       `Buscá los próximos catalizadores (earnings, lanzamientos de productos, eventos macro) para estas acciones: ${tickers.join(', ')}.
 Para cada ticker indicá el evento más próximo relevante.
 Devolvé SOLO este JSON: {"catalysts":[{"ticker":"NVDA","evento":"Q2 earnings ~20 ago 2026","impacto":"alto"}]}`,
@@ -1165,11 +1166,11 @@ Devolvé SOLO este JSON: {"catalysts":[{"ticker":"NVDA","evento":"Q2 earnings ~2
     if(!m)throw new Error('parse');
     const cats=JSON.parse(m[0]).catalysts||[];
     if(!cats.length)throw new Error('empty');
-    el.innerHTML<`<div class="catalyst-grid">${cats.map(c=>`
+    el.innerHTML=`<div class="catalyst-grid">${cats.map(c=>`
       <div class="catalyst-card">
         <div class="catalyst-ticker">${c.ticker}</div>
         <div class="catalyst-text">${c.evento}</div>
-        ${c.impacto?`<div style="font-size:.58rem;font-family:var(--mono);color:var(--amber);margin-top:.2rem">impacto: ${c.impacto}</div>`:'')}
+        ${c.impacto?`<div style="font-size:.58rem;font-family:var(--mono);color:var(--amber);margin-top:.2rem">impacto: ${c.impacto}</div>`:''}
       </div>`).join('')}</div>`;
   }catch(e){
     el.innerHTML=`<div style="font-size:.68rem;color:var(--muted);font-family:var(--mono)">Catalizadores no disponibles ahora. Intentá recargar el dashboard.</div>`;
